@@ -1,4 +1,4 @@
-//! The least libretro frontend that shows video and reads system RAM. No audio, no input.
+//! The least libretro frontend that shows video, reads system RAM and takes one joypad. No audio.
 use std::ffi::{CString, c_char, c_uint, c_void};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering::Relaxed};
@@ -26,6 +26,8 @@ struct AvInfo {
 
 // libretro callbacks carry no user pointer, so one core per process.
 static PIXEL_FORMAT: AtomicU32 = AtomicU32::new(0);
+/// Held buttons of player one's joypad, one bit per libretro joypad id (B = 0 ... R = 11).
+pub static JOYPAD: AtomicU32 = AtomicU32::new(0);
 type Sink = Box<dyn FnMut(Vec<u8>, u32, u32) + Send>;
 static SINK: Mutex<Option<Sink>> = Mutex::new(None);
 
@@ -54,8 +56,9 @@ unsafe extern "C" fn audio_batch(_: *const i16, frames: usize) -> usize {
     frames
 }
 unsafe extern "C" fn input_poll() {}
-unsafe extern "C" fn input_state(_: c_uint, _: c_uint, _: c_uint, _: c_uint) -> i16 {
-    0
+unsafe extern "C" fn input_state(port: c_uint, device: c_uint, _: c_uint, id: c_uint) -> i16 {
+    // Device 1 is RETRO_DEVICE_JOYPAD.
+    if port == 0 && device == 1 && id < 16 { (JOYPAD.load(Relaxed) >> id & 1) as i16 } else { 0 }
 }
 
 /// libretro pixel formats (0 = 0RGB1555, 1 = XRGB8888, 2 = RGB565) to tightly packed BGRA.
@@ -126,7 +129,16 @@ pub fn run(core: &str, rom: &str, frame: impl FnMut(Vec<u8>, u32, u32) + Send + 
 
 #[cfg(test)]
 mod tests {
-    use super::to_bgra;
+    use super::*;
+
+    #[test]
+    fn a_held_button_reads_as_pressed_on_player_one_only() {
+        JOYPAD.store(1 << 9, Relaxed);
+        unsafe {
+            assert_eq!((input_state(0, 1, 0, 9), input_state(0, 1, 0, 0), input_state(1, 1, 0, 9)), (1, 0, 0));
+        }
+        JOYPAD.store(0, Relaxed);
+    }
 
     #[test]
     fn every_pixel_format_becomes_bgra_and_pitch_padding_is_dropped() {
