@@ -1,0 +1,18 @@
+[package]
+name = "game-coach"
+version = "0.0.1"
+edition = "2024"
+license = "MIT"
+
+[dependencies]
+# Rune is pre-release: pinned rev of `dev`.
+rune = { git = "https://github.com/anomalyco/rune", rev = "9f34e1d2503b594cd8be40edc33e2880162b1c31" }
+libloading = "0.8"
+
+# Cargo does not inherit patches: mirror Rune's [patch.crates-io] at the same rev.
+[patch.crates-io]
+winit = { git = "https://github.com/anomalyco/rune", rev = "9f34e1d2503b594cd8be40edc33e2880162b1c31" }
+parley_engine = { git = "https://github.com/anomalyco/rune", rev = "9f34e1d2503b594cd8be40edc33e2880162b1c31" }
+wgpu-hal = { git = "https://github.com/anomalyco/rune", rev = "9f34e1d2503b594cd8be40edc33e2880162b1c31" }
+accesskit_windows = { git = "https://github.com/anomalyco/rune", rev = "9f34e1d2503b594cd8be40edc33e2880162b1c31" }
+accesskit_macos = { git = "https://github.com/anomalyco/rune", rev = "9f34e1d2503b594cd8be40edc33e2880162b1c31" }
